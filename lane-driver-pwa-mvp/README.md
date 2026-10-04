@@ -21,6 +21,20 @@ pnpm start        # serve the production build
 
 The SQLite database is created at `./data/lane.db` (override with `DATABASE_URL`). Migrations run automatically at startup.
 
+## Put it online (free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/cubinghay-lgtm/lane334)
+
+1. Click the button and sign in to Render with GitHub.
+2. Click **Apply**. Render reads [`render.yaml`](../render.yaml): a free Node web service that builds with pnpm and health-checks `/api/health`.
+3. After about 3 minutes you get a public `https://lane-….onrender.com` link. It's HTTPS, so the app can be installed to a phone's home screen.
+
+Every push to the default branch redeploys automatically.
+
+Free-plan limits:
+- **Sleeping:** the service sleeps after 15 minutes without visitors, and the first visit afterwards takes about a minute to wake it.
+- **Data resets:** the disk isn't persistent, so learner progress and board posts reset whenever the service restarts or redeploys. That's fine for demos. For lasting data, add a Render persistent disk (paid) mounted at `lane-driver-pwa-mvp/data`, or move the database to a hosted service.
+
 ## Features
 
 | | |

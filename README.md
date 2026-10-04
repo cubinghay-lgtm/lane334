@@ -1,6 +1,7 @@
 # Lane
 
 [![CI](https://github.com/cubinghay-lgtm/lane334/actions/workflows/ci.yml/badge.svg)](https://github.com/cubinghay-lgtm/lane334/actions/workflows/ci.yml)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/cubinghay-lgtm/lane334)
 
 A self-learning driver-education PWA for the Congressional App Challenge. It helps teen drivers pass the California permit test and build defensive driving habits.
 
