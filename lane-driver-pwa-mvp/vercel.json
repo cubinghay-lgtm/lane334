@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm exec vite build",
+  "outputDirectory": "dist/public",
+  "functions": {
+    "api/trpc/[trpc].ts": { "includeFiles": "drizzle/migrations/**" }
+  },
+  "rewrites": [{ "source": "/((?!api/|videos/).*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ]
+}

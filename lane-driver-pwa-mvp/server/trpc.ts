@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
-import { ensureLearner, type Db } from "./db";
+import { ensureLearner, type Db } from "./db.js";
 
 export const LEARNER_HEADER = "x-lane-learner";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -22,8 +22,8 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const createCallerFactory = t.createCallerFactory;
 
-export const learnerProcedure = t.procedure.use(({ ctx, next }) => {
+export const learnerProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.learnerId) throw new TRPCError({ code: "UNAUTHORIZED", message: "Missing learner id" });
-  ensureLearner(ctx.db, ctx.learnerId);
+  await ensureLearner(ctx.db, ctx.learnerId);
   return next({ ctx: { ...ctx, learnerId: ctx.learnerId } });
 });

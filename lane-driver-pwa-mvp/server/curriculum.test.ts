@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { EMERGENCY_CHECKLIST, isAnswerCorrect, LESSON_SEEDS } from "@shared/curriculum";
 import { anonymousHandle, AUTO_HIDE_REPORT_THRESHOLD, moderatePost } from "@shared/moderation";
 import { eq } from "drizzle-orm";
-import { learningEvents } from "../drizzle/schema";
-import { createDb, getTopicRow, type Db } from "./db";
-import { appRouter } from "./routers";
-import { createCallerFactory, createContext } from "./trpc";
+import { learningEvents } from "../drizzle/schema.js";
+import { createDb, getTopicRow, type Db } from "./db.js";
+import { appRouter } from "./routers.js";
+import { createCallerFactory, createContext } from "./trpc.js";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -100,8 +100,8 @@ describe("moderation", () => {
 describe("tRPC routers", () => {
   let db: Db;
 
-  beforeEach(() => {
-    db = createDb(":memory:");
+  beforeEach(async () => {
+    db = await createDb(":memory:");
   });
 
   it("serves the curriculum without a learner id", async () => {
@@ -136,7 +136,7 @@ describe("tRPC routers", () => {
     expect(outcome.result.smoothedMastery).toBe(outcome.result.sessionMastery);
     expect(outcome.priorMastery).toBeNull();
 
-    const row = getTopicRow(db, learnerId!, lesson.topicId)!;
+    const row = (await getTopicRow(db, learnerId!, lesson.topicId))!;
     expect(row).toMatchObject({ attemptCount: 1, correctCount: 1, reviewAttempts: 1, reviewCorrect: 1, knowledgeCheckPassed: true });
     expect(outcome.readiness.scoreOutOf100).toBe(Math.round((row.mastery / LESSON_SEEDS.length) * 100));
   });
@@ -302,9 +302,9 @@ describe("tRPC routers", () => {
       expect(await caller.privacy.settings()).toEqual({ analyticsOptOut: true });
       await caller.learning.recordInteraction({ ...baseInteraction, lessonId: LESSON_SEEDS[0].id, firstAnswerCorrect: true });
 
-      const events = db.select().from(learningEvents).where(eq(learningEvents.learnerId, learnerId!)).all();
+      const events = await db.select().from(learningEvents).where(eq(learningEvents.learnerId, learnerId!)).all();
       expect(events).toHaveLength(0);
-      expect(getTopicRow(db, learnerId!, LESSON_SEEDS[0].topicId)?.attemptCount).toBe(1);
+      expect((await getTopicRow(db, learnerId!, LESSON_SEEDS[0].topicId))?.attemptCount).toBe(1);
     });
 
     it("deletes all of a learner's data and undoes their votes", async () => {
@@ -316,7 +316,7 @@ describe("tRPC routers", () => {
 
       await caller.privacy.deleteMyData();
 
-      expect(getTopicRow(db, learnerId!, LESSON_SEEDS[0].topicId)).toBeUndefined();
+      expect(await getTopicRow(db, learnerId!, LESSON_SEEDS[0].topicId)).toBeUndefined();
       const others = await callerFor(db).caller.community.list({ sort: "new" });
       expect(others.map((p) => p.title)).not.toContain("Pothole");
       expect(others.find((p) => p.id === post.id)?.upvotes).toBe(post.upvotes);

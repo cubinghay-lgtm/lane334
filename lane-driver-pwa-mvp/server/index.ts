@@ -3,9 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import express from "express";
-import { createDb } from "./db";
-import { appRouter } from "./routers";
-import { createContext, LEARNER_HEADER } from "./trpc";
+import { getDb } from "./handler.js";
+import { appRouter } from "./routers.js";
+import { createContext, LEARNER_HEADER } from "./trpc.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(here, "..");
@@ -13,7 +13,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? 3000);
 
 async function main() {
-  const db = createDb();
+  await getDb(); // fail fast on a bad database config
   const app = express();
   app.disable("x-powered-by");
 
@@ -25,7 +25,7 @@ async function main() {
     "/api/trpc",
     createExpressMiddleware({
       router: appRouter,
-      createContext: ({ req }) => createContext(db, req.headers[LEARNER_HEADER]),
+      createContext: async ({ req }) => createContext(await getDb(), req.headers[LEARNER_HEADER]),
     }),
   );
 

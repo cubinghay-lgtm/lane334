@@ -2,8 +2,8 @@
  * Maps one card interaction onto the four component formulas. Shared so the
  * server's authoritative score and the client's offline estimate always agree.
  */
-import { computeHistoricalReviewRate, computeMastery, type MasteryResult } from "./algorithm";
-import type { LessonItem } from "./curriculum";
+import { computeHistoricalReviewRate, computeMastery, type MasteryResult } from "./algorithm.js";
+import type { LessonItem } from "./curriculum.js";
 
 export interface InteractionInput {
   lessonId: string;

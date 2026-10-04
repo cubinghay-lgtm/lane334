@@ -93,7 +93,8 @@ export default function Home() {
         return utils.client.learning.skip.mutate(item.input);
       });
       if (sent > 0) {
-        toast.success(`Synced ${sent} offline ${sent === 1 ? "lesson" : "lessons"}`);
+        // Several triggers can share one flush; a fixed id keeps it to a single toast.
+        toast.success(`Synced ${sent} offline ${sent === 1 ? "lesson" : "lessons"}`, { id: "outbox-sync" });
         void utils.progress.summary.invalidate();
       }
     };

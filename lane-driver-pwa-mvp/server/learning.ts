@@ -6,11 +6,11 @@ import {
   rankFeed,
   selectDailyReviewQueue,
   type TopicState,
-} from "../shared/algorithm";
-import { LESSON_SEEDS, type LessonItem } from "../shared/curriculum";
-import { scoreInteraction, type InteractionInput } from "../shared/scoring";
-import type { TopicMasteryRow } from "../drizzle/schema";
-import { getTopicRow, getTopicRows, learnerAnalyticsEnabled, logLearningEvent, upsertTopicRow, type Db } from "./db";
+} from "../shared/algorithm.js";
+import { LESSON_SEEDS, type LessonItem } from "../shared/curriculum.js";
+import { scoreInteraction, type InteractionInput } from "../shared/scoring.js";
+import type { TopicMasteryRow } from "../drizzle/schema.js";
+import { getTopicRow, getTopicRows, learnerAnalyticsEnabled, logLearningEvent, upsertTopicRow, type Db } from "./db.js";
 
 /** Safety-critical topics only count as complete once the learner has answered correctly. */
 export function isTopicComplete(lesson: LessonItem, row: TopicMasteryRow | undefined): boolean {
@@ -18,8 +18,14 @@ export function isTopicComplete(lesson: LessonItem, row: TopicMasteryRow | undef
   return row.mastery >= 0.6 && (!lesson.requiresKnowledgeCheck || row.knowledgeCheckPassed);
 }
 
-export function recordInteraction(db: Db, learnerId: string, lesson: LessonItem, input: InteractionInput, now = new Date()) {
-  const row = getTopicRow(db, learnerId, lesson.topicId);
+export async function recordInteraction(
+  db: Db,
+  learnerId: string,
+  lesson: LessonItem,
+  input: InteractionInput,
+  now = new Date(),
+) {
+  const row = await getTopicRow(db, learnerId, lesson.topicId);
   const { result, followUpCorrect, retryCompleted, priorMastery } = scoreInteraction(lesson, input, row);
 
   // Every first answer becomes review evidence (C3) for later sessions; a
@@ -38,7 +44,7 @@ export function recordInteraction(db: Db, learnerId: string, lesson: LessonItem,
     safetyWeight: lesson.safetyWeight,
   });
 
-  upsertTopicRow(db, learnerId, lesson.topicId, {
+  await upsertTopicRow(db, learnerId, lesson.topicId, {
     mastery: result.smoothedMastery,
     sessionMastery: result.sessionMastery,
     attemptCount,
@@ -58,8 +64,8 @@ export function recordInteraction(db: Db, learnerId: string, lesson: LessonItem,
     lastReviewedAt: input.mode === "review" ? now : (row?.lastReviewedAt ?? null),
   });
 
-  if (learnerAnalyticsEnabled(db, learnerId)) {
-    logLearningEvent(db, {
+  if (await learnerAnalyticsEnabled(db, learnerId)) {
+    await logLearningEvent(db, {
       learnerId,
       lessonId: lesson.id,
       topicId: lesson.topicId,
@@ -81,8 +87,8 @@ export function recordInteraction(db: Db, learnerId: string, lesson: LessonItem,
   return { result, priority, priorMastery };
 }
 
-export function buildProgress(db: Db, learnerId: string, now = new Date(), tzOffsetMinutes = 0) {
-  const rows = new Map(getTopicRows(db, learnerId).map((row) => [row.topicId, row]));
+export async function buildProgress(db: Db, learnerId: string, now = new Date(), tzOffsetMinutes = 0) {
+  const rows = new Map((await getTopicRows(db, learnerId)).map((row) => [row.topicId, row]));
 
   const topics = LESSON_SEEDS.map((lesson) => {
     const row = rows.get(lesson.topicId);

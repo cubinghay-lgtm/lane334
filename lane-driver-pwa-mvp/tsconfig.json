@@ -15,12 +15,11 @@
     "isolatedModules": true,
     "allowImportingTsExtensions": false,
     "noEmit": true,
-    "types": ["node", "vite/client", "vite-plugin-pwa/client"],
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["client/src", "server", "shared", "drizzle", "vite.config.ts", "vitest.config.ts", "drizzle.config.ts"],
+  "include": ["client/src", "server", "shared", "drizzle", "api", "vite.config.ts", "vitest.config.ts", "drizzle.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -41,8 +41,21 @@ export function pendingCount() {
   return read().length;
 }
 
-/** Replays queued learning events in order; stops at the first network failure. */
-export async function flushOutbox(send: (item: OutboxItem) => Promise<unknown>): Promise<number> {
+let flushing: Promise<number> | null = null;
+
+/**
+ * Replays queued learning events in order; stops at the first network failure.
+ * Single-flight: app start and the browser's "online" event often fire together,
+ * and two overlapping flushes would send the same interaction twice.
+ */
+export function flushOutbox(send: (item: OutboxItem) => Promise<unknown>): Promise<number> {
+  flushing ??= replay(send).finally(() => {
+    flushing = null;
+  });
+  return flushing;
+}
+
+async function replay(send: (item: OutboxItem) => Promise<unknown>): Promise<number> {
   const items = read();
   let sent = 0;
   for (const item of items) {
@@ -54,6 +67,7 @@ export async function flushOutbox(send: (item: OutboxItem) => Promise<unknown>):
     }
     sent++;
   }
-  write(items.slice(sent));
+  // Re-read: anything queued while we were sending was appended after the snapshot.
+  write(read().slice(sent));
   return sent;
 }

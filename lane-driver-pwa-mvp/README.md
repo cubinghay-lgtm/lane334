@@ -19,21 +19,23 @@ pnpm build        # client → dist/public (with service worker), server → dis
 pnpm start        # serve the production build
 ```
 
-The SQLite database is created at `./data/lane.db` (override with `DATABASE_URL`). Migrations run automatically at startup.
+Locally, the SQLite database is created at `./data/lane.db` (override with `DATABASE_URL`). Migrations run automatically at startup.
 
-## Put it online (free)
+## Put it online (Vercel)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/cubinghay-lgtm/lane334)
+1. Go to [vercel.com/new](https://vercel.com/new) and choose **Continue with GitHub**.
+2. Import **`lane334`**.
+3. Under **Root Directory**, click **Edit** and select **`lane-driver-pwa-mvp`**. Everything else comes from [`vercel.json`](vercel.json).
+4. Click **Deploy**. About a minute later you get a public `https://….vercel.app` link. It's HTTPS, so the app can be installed to a phone's home screen.
 
-1. Click the button and sign in to Render with GitHub.
-2. Click **Apply**. Render reads [`render.yaml`](../render.yaml): a free Node web service that builds with pnpm and health-checks `/api/health`.
-3. After about 3 minutes you get a public `https://lane-….onrender.com` link. It's HTTPS, so the app can be installed to a phone's home screen.
+Every push to GitHub redeploys automatically.
 
-Every push to the default branch redeploys automatically.
+**Keep data between visits (recommended, free).** The app runs on Vercel as serverless functions, which have no permanent disk. Without a database connected, progress and board posts live in a temporary file that resets whenever Vercel starts a fresh instance. To keep them:
 
-Free-plan limits:
-- **Sleeping:** the service sleeps after 15 minutes without visitors, and the first visit afterwards takes about a minute to wake it.
-- **Data resets:** the disk isn't persistent, so learner progress and board posts reset whenever the service restarts or redeploys. That's fine for demos. For lasting data, add a Render persistent disk (paid) mounted at `lane-driver-pwa-mvp/data`, or move the database to a hosted service.
+1. In the Vercel project, open **Storage → Create Database → Turso** and connect it to this project. That adds `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`.
+2. Go to **Deployments → ⋯ → Redeploy**.
+
+Lane creates its tables on first use. Any other libSQL host works too: set those two environment variables yourself.
 
 ## Features
 
@@ -63,12 +65,15 @@ lane-driver-pwa-mvp/
 │   └── moderation.ts              # Community post safety filter
 ├── server/
 │   ├── index.ts                   # Express: /api/trpc, /videos, Vite middleware (dev) or static (prod)
+│   ├── handler.ts                 # Shared lazy DB connection + Web-standard tRPC handler
 │   ├── trpc.ts                    # Context + anonymous learner procedure
 │   ├── routers.ts                 # curriculum, progress, learning, community, privacy
 │   ├── learning.ts                # Records interactions, builds progress/readiness/review/feed order
 │   ├── db.ts                      # SQLite + Drizzle helpers, community board, data deletion, seed posts
 │   ├── algorithm.test.ts          # Every formula, band, and worked example
 │   └── curriculum.test.ts         # Curriculum integrity, moderation, and router integration tests
+├── api/                           # Vercel Functions: trpc/[trpc].ts → server/handler.ts, health.ts
+├── vercel.json                    # Vercel build, output, function, and SPA rewrite settings
 ├── drizzle/
 │   ├── schema.ts                  # learners, topic_mastery, learning_events, hazard_posts, votes, reports
 │   └── migrations/                # Generated SQL (pnpm db:generate)
@@ -87,7 +92,7 @@ lane-driver-pwa-mvp/
             └── ui/                        # shadcn-style Button, Card, Badge, Dialog, DropdownMenu, Input, Textarea, Sonner
 ```
 
-Stack: React 19, TypeScript, Tailwind CSS v4, shadcn/ui-style Radix components, Express 5, tRPC 11, Drizzle ORM (SQLite via better-sqlite3), vite-plugin-pwa (Workbox) and Vitest.
+Stack: React 19, TypeScript, Tailwind CSS v4, shadcn/ui-style Radix components, Express 5 (local) / Vercel Functions (hosted), tRPC 11, Drizzle ORM on libSQL (a local SQLite file, or Turso when hosted), vite-plugin-pwa (Workbox) and Vitest.
 
 ## Lesson videos
 
@@ -178,7 +183,12 @@ Example C also lists N = 0.40 for 20% video with no key segment, but N can be at
 
 ## Database
 
-SQLite through Drizzle (`drizzle/schema.ts`). After editing the schema, run `pnpm db:generate` to create a migration. To move to MySQL/TiDB, port the schema to `drizzle-orm/mysql-core`, switch the driver in `server/db.ts`, and change `dialect` in `drizzle.config.ts`. The query helpers use portable Drizzle APIs.
+Lane uses Drizzle ORM on libSQL, the SQLite-compatible engine behind Turso:
+
+- **Local (`pnpm dev`, `pnpm start`, tests):** a SQLite file at `./data/lane.db` (or set `DATABASE_URL`). Tests use `:memory:`.
+- **Hosted:** set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. Lane then talks to Turso over HTTP with a pure-JavaScript client, so there are no native modules in the serverless function.
+
+Migrations in `drizzle/migrations/` run automatically on first connection. After editing `drizzle/schema.ts`, run `pnpm db:generate`.
 
 ## Before publishing
 

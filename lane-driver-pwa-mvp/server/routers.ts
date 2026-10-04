@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { EMERGENCY_CHECKLIST, getLessonById, LESSON_SEEDS } from "../shared/curriculum";
-import { anonymousHandle, moderatePost, POST_LIMITS } from "../shared/moderation";
-import { hazardPosts } from "../drizzle/schema";
+import { EMERGENCY_CHECKLIST, getLessonById, LESSON_SEEDS } from "../shared/curriculum.js";
+import { anonymousHandle, moderatePost, POST_LIMITS } from "../shared/moderation.js";
+import { hazardPosts } from "../drizzle/schema.js";
 import {
   deleteLearnerData,
   ensureLearner,
@@ -11,9 +11,9 @@ import {
   reportPost,
   setAnalyticsOptOut,
   toggleUpvote,
-} from "./db";
-import { buildProgress, recordInteraction } from "./learning";
-import { learnerProcedure, publicProcedure, router } from "./trpc";
+} from "./db.js";
+import { buildProgress, recordInteraction } from "./learning.js";
+import { learnerProcedure, publicProcedure, router } from "./trpc.js";
 
 const ratio = z.number().min(0).max(1);
 const lessonId = z.string().max(40);
@@ -65,20 +65,20 @@ export const appRouter = router({
           activeSeconds: z.number().min(0).max(60 * 60),
         }),
       )
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         const lesson = requireLesson(input.lessonId);
-        const outcome = recordInteraction(ctx.db, ctx.learnerId, lesson, input);
-        const progress = buildProgress(ctx.db, ctx.learnerId);
+        const outcome = await recordInteraction(ctx.db, ctx.learnerId, lesson, input);
+        const progress = await buildProgress(ctx.db, ctx.learnerId);
         return { ...outcome, readiness: progress.readiness };
       }),
 
-    reviewLater: learnerProcedure.input(z.object({ lessonId })).mutation(({ ctx, input }) => {
-      recordSkip(ctx.db, ctx.learnerId, requireLesson(input.lessonId).topicId, true);
+    reviewLater: learnerProcedure.input(z.object({ lessonId })).mutation(async ({ ctx, input }) => {
+      await recordSkip(ctx.db, ctx.learnerId, requireLesson(input.lessonId).topicId, true);
       return { queued: true };
     }),
 
-    skip: learnerProcedure.input(z.object({ lessonId })).mutation(({ ctx, input }) => {
-      recordSkip(ctx.db, ctx.learnerId, requireLesson(input.lessonId).topicId, false);
+    skip: learnerProcedure.input(z.object({ lessonId })).mutation(async ({ ctx, input }) => {
+      await recordSkip(ctx.db, ctx.learnerId, requireLesson(input.lessonId).topicId, false);
       return { skipped: true };
     }),
   }),
@@ -97,12 +97,12 @@ export const appRouter = router({
           location: z.string().max(POST_LIMITS.location.max * 2).optional(),
         }),
       )
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         const verdict = moderatePost(input);
         if (!verdict.ok) throw new TRPCError({ code: "BAD_REQUEST", message: verdict.reason });
         checkPostRateLimit(ctx.learnerId);
         const location = input.location?.trim() || null;
-        return ctx.db
+        return (await ctx.db
           .insert(hazardPosts)
           .values({
             authorId: ctx.learnerId,
@@ -112,38 +112,37 @@ export const appRouter = router({
             body: input.body.trim(),
             location,
           })
-          .returning({ id: hazardPosts.id })
-          .get();
+          .returning({ id: hazardPosts.id }))[0];
       }),
 
-    toggleUpvote: learnerProcedure.input(z.object({ postId: z.number().int() })).mutation(({ ctx, input }) => {
-      const result = toggleUpvote(ctx.db, ctx.learnerId, input.postId);
+    toggleUpvote: learnerProcedure.input(z.object({ postId: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const result = await toggleUpvote(ctx.db, ctx.learnerId, input.postId);
       if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
       return result;
     }),
 
     report: learnerProcedure
       .input(z.object({ postId: z.number().int(), reason: z.enum(["unsafe", "inaccurate", "personal_info", "offensive", "spam"]) }))
-      .mutation(({ ctx, input }) => {
-        const result = reportPost(ctx.db, ctx.learnerId, input.postId, input.reason);
+      .mutation(async ({ ctx, input }) => {
+        const result = await reportPost(ctx.db, ctx.learnerId, input.postId, input.reason);
         if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
         return result;
       }),
   }),
 
   privacy: router({
-    settings: learnerProcedure.query(({ ctx }) => {
-      const learner = ensureLearner(ctx.db, ctx.learnerId);
+    settings: learnerProcedure.query(async ({ ctx }) => {
+      const learner = await ensureLearner(ctx.db, ctx.learnerId);
       return { analyticsOptOut: learner.analyticsOptOut };
     }),
 
-    setAnalyticsOptOut: learnerProcedure.input(z.object({ optOut: z.boolean() })).mutation(({ ctx, input }) => {
-      setAnalyticsOptOut(ctx.db, ctx.learnerId, input.optOut);
+    setAnalyticsOptOut: learnerProcedure.input(z.object({ optOut: z.boolean() })).mutation(async ({ ctx, input }) => {
+      await setAnalyticsOptOut(ctx.db, ctx.learnerId, input.optOut);
       return { analyticsOptOut: input.optOut };
     }),
 
-    deleteMyData: learnerProcedure.mutation(({ ctx }) => {
-      deleteLearnerData(ctx.db, ctx.learnerId);
+    deleteMyData: learnerProcedure.mutation(async ({ ctx }) => {
+      await deleteLearnerData(ctx.db, ctx.learnerId);
       return { deleted: true };
     }),
   }),
