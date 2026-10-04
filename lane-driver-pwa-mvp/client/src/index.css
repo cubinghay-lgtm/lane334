@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Lane palette: night navy road, teal "go", lane-marking yellow, hazard coral. */
+:root {
+  --background: #0b132b;
+  --surface: #1c2541;
+  --surface-2: #243058;
+  --border: rgb(58 80 107 / 0.55);
+  --foreground: #eef2ff;
+  --muted-foreground: #9aa8c7;
+  --primary: #5bc0be;
+  --primary-foreground: #0b132b;
+  --accent: #6fffe9;
+  --lane: #ffd166;
+  --hazard: #ef476f;
+  --success: #06d6a0;
+  --ring: #6fffe9;
+  --radius: 1rem;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-lane: var(--lane);
+  --color-hazard: var(--hazard);
+  --color-success: var(--success);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --animate-pulse-ring: pulse-ring 1.2s ease-out infinite;
+  --animate-rise: rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes rise {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  html,
+  body {
+    height: 100%;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+  }
+  body {
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgb(91 192 190 / 0.12), transparent 60%),
+      var(--background);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
