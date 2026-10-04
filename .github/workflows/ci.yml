@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lane-driver-pwa-mvp
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: lane-driver-pwa-mvp/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: lane-driver-pwa-mvp/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm build
+
+      - name: Smoke test the production server
+        run: |
+          PORT=3000 pnpm start > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/api/health && break; sleep 1; done
+          curl -sf http://localhost:3000/api/health
+          curl -sf http://localhost:3000/ | grep -q '<div id="root">'
+          curl -sf http://localhost:3000/manifest.json > /dev/null
+          curl -sf http://localhost:3000/sw.js > /dev/null
+          curl -sf "http://localhost:3000/api/trpc/curriculum.list" | grep -q lesson-19
+          echo "Lane is up"
+        env:
+          DATABASE_URL: ./data/ci.db
+
+      - name: Server log
+        if: always()
+        run: cat server.log || true

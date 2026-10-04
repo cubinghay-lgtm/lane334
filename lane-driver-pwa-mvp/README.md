@@ -6,9 +6,11 @@ The recommendation system optimizes for learning and safe decisions, not time in
 
 ## Quick start
 
-Requires Node 22+ and pnpm 10+.
+Requires Node 22+ and pnpm 10+ (run `corepack enable` once if `pnpm` isn't installed). Works on macOS, Linux and Windows.
 
 ```bash
+git clone https://github.com/cubinghay-lgtm/lane334.git
+cd lane334/lane-driver-pwa-mvp
 pnpm install
 pnpm dev          # http://localhost:3000 — Express + tRPC + Vite (hot reload)
 pnpm test         # unit + router integration tests (vitest)
